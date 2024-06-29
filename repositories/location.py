@@ -14,7 +14,7 @@ class LocationRepository(Repository):
         :raise exceptions_404.LocationNotFoundException: 
         if location not found in database.
         '''
-        location = self.session.query(LocationModel).get(location_zip)
+        location = self.get_new_session.query(LocationModel).get(location_zip)
         if location is None:
             return None
         location_schema = LocationSchema.model_validate(location, from_attributes=True)
@@ -31,9 +31,11 @@ class LocationRepository(Repository):
         if location not found in database.
         '''
         location = self.get(location_zip)
+        if location is None:
+            return None
         return (location.lat, location.lng)
     
     def get_all(self) -> list[LocationSchema]:
-        locations = self.session.query(LocationModel).all()
+        locations = self.get_new_session.query(LocationModel).all()
         locations_DTO = [LocationSchema.model_validate(row, from_attributes=True) for row in locations]
         return locations_DTO

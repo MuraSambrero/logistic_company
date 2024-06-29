@@ -8,7 +8,7 @@ from repositories.repository import Repository
 
 class CarRepository(Repository):
     def get_cars(self) -> list[CarSchema]:
-        cars = self.session.query(CarModel).all()
+        cars = self.get_new_session.query(CarModel).all()
         cars_DTO = [CarSchema.model_validate(row, from_attributes=True) for row in cars]
         return cars_DTO
 
@@ -18,7 +18,7 @@ class CarRepository(Repository):
             .select_from(CarModel)
             .options(selectinload(CarModel.location))
         )
-        cars = self.session.execute(query)
+        cars = self.get_new_session.execute(query)
         cars = cars.scalars().all()
         cars_DTO = [
             CarSchemaRel.model_validate(row, from_attributes=True) for row in cars
@@ -37,7 +37,7 @@ class CarRepository(Repository):
             .returning(CarModel)
         )
         try:
-            car = self.session.execute(stmt).scalar_one_or_none()
+            car = self.get_new_session.execute(stmt).scalar_one_or_none()
         except IntegrityError:
             return None
         car_DTO = CarSchema.model_validate(car, from_attributes=True) if car else None

@@ -1,10 +1,16 @@
-from typing import Literal
 from sqlalchemy import insert
 from db.models import CargoModel
-from schemas.cargo import CargoSchemaPickup, CargoSchemaAdd, CargoSchema
-from sqlalchemy import select
+from schemas.cargo import (
+    CargoSchemaPickup,
+    CargoSchemaAdd,
+    CargoSchema,
+    CargoSchemaPatch,
+)
+from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 from repositories.repository import Repository
+from sqlalchemy import update
 
 # - Создание нового груза (характеристики локаций pick-up, delivery определяются по введенному zip-коду);
 # - Получение списка грузов (локации pick-up, delivery, количество ближайших машин до груза ( =< 450 миль));
@@ -14,20 +20,20 @@ from repositories.repository import Repository
 
 
 class CargoRepository(Repository):
-
     def create(self, cargo_schema: CargoSchemaAdd) -> CargoSchema | None:
         query = (
             insert(CargoModel)
             .values(cargo_schema.model_dump(exclude_none=True))
             .returning(CargoModel)
         )
-        cursor = self.session.execute(query)
+        try:
+            cursor = self.get_new_session.execute(query)
+        except IntegrityError:
+            return None
         cargo_model = cursor.scalar_one_or_none()
         if cargo_model is None:
             return None
-        cargo_dto = CargoSchema.model_validate(
-            cargo_model, from_attributes=True
-        )
+        cargo_dto = CargoSchema.model_validate(cargo_model, from_attributes=True)
         return cargo_dto
 
     def get_cargos_pickup_location(self) -> list[CargoSchemaPickup]:
@@ -36,7 +42,7 @@ class CargoRepository(Repository):
             .select_from(CargoModel)
             .options(selectinload(CargoModel.pickup_location))
         )
-        cursor = self.session.execute(query)
+        cursor = self.get_new_session.execute(query)
         cargos = cursor.scalars().all()
         cargos_DTO = [
             CargoSchemaPickup.model_validate(row, from_attributes=True)
@@ -51,7 +57,7 @@ class CargoRepository(Repository):
             .where(CargoModel.id == cargo_id)
             .options(selectinload(CargoModel.pickup_location))
         )
-        cursor = self.session.execute(query)
+        cursor = self.get_new_session.execute(query)
         cargo_with_location = cursor.scalar_one_or_none()
         if cargo_with_location is None:
             return None
@@ -59,5 +65,33 @@ class CargoRepository(Repository):
             cargo_with_location, from_attributes=True
         )
 
-    # def update(self, cargo_id, cargo_schema: CargoSchema):
-    #     cargo = self.session.query(Cargo).filter(Cargo.id == cargo_id).first()
+    def update_cargo(self, cargo_schema: CargoSchemaPatch) -> CargoSchema | None:
+        query = (
+            update(CargoModel)
+            .where(CargoModel.id == cargo_schema.id)
+            .values(cargo_schema.model_dump(exclude_none=True))
+            .returning(CargoModel)
+        )
+        try:
+            cursor = self.get_new_session.execute(query)
+        except IntegrityError:
+            return None
+        cargo_model = cursor.scalar_one_or_none()
+        if cargo_model is None:
+            return None
+        cargo_dto = CargoSchema.model_validate(cargo_model, from_attributes=True)
+        return cargo_dto
+
+    def delete_cargo(self, cargo_id: int) -> CargoSchema | None:
+        session = self.get_session()
+        stmt = (
+            delete(CargoModel)
+            .where(CargoModel.id == cargo_id)
+            .returning(CargoModel)
+        )
+        cursor = session.execute(stmt)
+        cargo_model = cursor.scalar_one_or_none()
+        if cargo_model is None:
+            return None
+        cargo_dto = CargoSchema.model_validate(cargo_model, from_attributes=True)
+        return cargo_dto

@@ -1,5 +1,12 @@
 from repositories.cargo import CargoRepository
-from schemas.cargo import CargoSchemaAdd, CargoSchemaNearCar, CargoSchemaWithCars
+from schemas.cargo import (
+    CargoSchema,
+    CargoSchemaAdd,
+    CargoSchemaNearCar,
+    CargoSchemaWithCars,
+    CargoSchemaPatchAPI,
+    CargoSchemaPatch,
+)
 from schemas.car import CarsWithDistance
 from services.location import LocationService
 from services.car import CarService
@@ -17,10 +24,6 @@ class CargoService:
         self.car_service = car_service
 
     def create(self, cargo_schema: CargoSchemaAdd):
-        location_pickup = self.location_service.get(cargo_schema.pickup_zip)
-        location_delivery = self.location_service.get(cargo_schema.delivery_zip)
-        if location_pickup is None or location_delivery is None:
-            return None
         result = self.repository.create(cargo_schema)
         return result
 
@@ -57,10 +60,13 @@ class CargoService:
             cargo.cars.append(car)
         return cargo
 
-    # def get_cargo(self, cargo_id):
-    #     cargo_list = self.session.query(Cargo).filter(Cargo.id == cargo_id).first()
-    #     return cargo_list
+    def update_cargo(
+        self, cargo_id: int, cargo_schema: CargoSchemaPatchAPI
+    ) -> CargoSchema | None:
+        cargo = CargoSchemaPatch(id=cargo_id, **cargo_schema.model_dump(exclude_none=True))
+        result = self.repository.update_cargo(cargo)
+        return result
 
-    # def update(self, cargo_id, cargo_schema: CargoSchema):
-    #     cargo = self.session.query(Cargo).filter(Cargo.id == cargo_id).first()
-    #     pass
+    def delete_cargo(self, cargo_id: int) -> CargoSchema | None:
+        cargo = self.repository.delete_cargo(cargo_id)
+        return cargo

@@ -24,3 +24,12 @@ class CargoSchemaNearCar(CargoSchemaAdd):
 
 class CargoSchemaWithCars(CargoSchemaAdd):
     cars: list[CarsWithDistance] | None = None
+
+class CargoSchemaPatchAPI(BaseModel):
+    pickup_zip: int | None = None
+    delivery_zip: int | None = None
+    description: str | None = None
+    weight: int | None = Field(default=None, gt=0, lt=1001)
+
+class CargoSchemaPatch(CargoSchemaPatchAPI):
+    id: int

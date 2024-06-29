@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from .location import LocationSchema
 
 # - Создание нового груза (характеристики локаций pick-up, delivery определяются по введенному zip-коду);
@@ -33,6 +33,6 @@ class CarsWithDistance(BaseModel):
     distance: float | None = None
 
 class CarSchemaPatch(BaseModel):
-    id: str = None
-    location_zip: int = None
-    capacity: int = None
+    id: str | None = None
+    location_zip: int | None  = None
+    capacity: int | None  = None

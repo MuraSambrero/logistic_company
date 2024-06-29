@@ -4,6 +4,7 @@ from schemas.cargo import (
     CargoSchemaAdd,
     CargoSchemaNearCar,
     CargoSchemaWithCars,
+    CargoSchemaPatchAPI
 )
 from services.cargo import CargoService
 from services.car import CarService
@@ -23,7 +24,15 @@ router_cars = APIRouter()
 
 @router_cargo.post("/create")
 async def create_cargo(
-    cargo_schema: CargoSchemaAdd,
+    cargo_schema: CargoSchemaAdd = Body(
+        description="JSON с данными для создания груза",
+        example={
+            "pickup_zip": 1234,
+            "delivery_zip": 5678,
+            "weight": 500,
+            "description": "Fragile item",
+        },
+    ),
     cargo_service: CargoService = Depends(get_cargo_service),
 ):
     cargo = cargo_service.create(cargo_schema)
@@ -47,7 +56,12 @@ async def list_cargo(
     description="Возвращает груз со списком номеров авто и расстоянием до авто.",
 )
 async def get_cargo_with_cars(
-    cargo_id: int = Path(),
+    cargo_id: int = Path(
+        description="ID груза",
+        gt=0,
+        example=1,
+        title="ID",
+    ),
     cargo_service: CargoService = Depends(get_cargo_service),
 ) -> CargoSchemaWithCars:
     cargo = cargo_service.get_cargo_with_cars(cargo_id)
@@ -67,7 +81,10 @@ async def update_car(
         regex=r"\d{4}[A-Z]",
         title="Автознак",
     ),
-    car_data: CarSchemaPatch = Body(),
+    car_data: CarSchemaPatch = Body(
+        description="JSON с данными для изменения",
+        example={"location_zip": 1234, "capacity": 948},
+    ),
     car_service: CarService = Depends(get_car_service),
 ):
     car = car_service.update_car(car_id, car_data)
@@ -76,18 +93,42 @@ async def update_car(
     return car
 
 
-# @router_cargo.delete("/{id}")
-# async def delete_cargo():
-#     pass
+@router_cargo.patch("{cargo_id:int}")
+def update_cargo(
+    cargo_id: int = Path(
+        description="ID груза",
+        gt=0,
+        example=1,
+        title="ID",
+    ),
+    cargo_schema: CargoSchemaPatchAPI = Body(
+        description="JSON с данными для изменения груза",
+        example={
+            "pickup_zip": 1234,
+            "delivery_zip": 5678,
+            "weight": 500,
+            "description": "Fragile item",
+        },
+    ),
+    cargo_service: CargoService = Depends(get_cargo_service),
+):
+    cargo = cargo_service.update_cargo(cargo_id, cargo_schema)
+    if cargo is None:
+        raise HTTPException(status_code=404, detail="Cargo not found")
+    return cargo
 
 
-# @router_cars.get("/")
-# async def get_cars(
-#     db: Session = Depends(get_db),
-# ):
-#     return CarService.get_cars_rel(db)
-
-
-# @router_cars.patch("/{id}")
-# async def update_car():
-#     pass
+@router_cargo.delete("/{cargo_id:int}")
+def delete_cargo(
+    cargo_id: int = Path(
+        description="ID груза",
+        gt=0,
+        example=1,
+        title="ID",
+    ),
+    cargo_service: CargoService = Depends(get_cargo_service),
+):
+    cargo = cargo_service.delete_cargo(cargo_id)
+    if cargo is None:
+        raise HTTPException(status_code=404, detail="Cargo not found")
+    return cargo

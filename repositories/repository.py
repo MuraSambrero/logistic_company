@@ -9,5 +9,5 @@ class Repository:
         return next(self.session_manager.yield_session())
     
     @property
-    def session(self):
+    def get_new_session(self):
         return self.get_session()
