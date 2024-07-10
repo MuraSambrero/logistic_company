@@ -1,19 +1,13 @@
+from typing import Any, Generator
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.session import Session
 from config import SQLALCHEMY_DATABASE_URL
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 class DatabaseSessionManager:
 
@@ -23,7 +17,7 @@ class DatabaseSessionManager:
         self.Sessionmaker = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.Base = declarative_base()
 
-    def yield_session(self):
+    def yield_session(self) -> Generator[Session, Any, None]:
         db = self.Sessionmaker()
         try:
             yield db

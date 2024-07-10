@@ -1,4 +1,5 @@
 from db.db import DatabaseSessionManager
+from db.models import Base
 
 
 class Repository:
@@ -11,3 +12,10 @@ class Repository:
     @property
     def get_new_session(self):
         return self.get_session()
+    
+    def create_tables(self):
+        Base.metadata.create_all(self.session_manager.engine)
+
+    def drop_tables(self):
+        Base.metadata.drop_all(self.session_manager.engine)
+

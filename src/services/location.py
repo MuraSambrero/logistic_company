@@ -1,6 +1,7 @@
-from schemas.location import LocationSchema
 from geopy.distance import geodesic as GD
 from repositories.location import LocationRepository
+import pandas as pd
+from schemas.location import LocationSchemaCsv, LocationSchemaAddDTO, LocationSchema
 
 
 class LocationService:
@@ -25,3 +26,15 @@ class LocationService:
             cls.get_coord(location_second),
         ).miles
         return distance
+
+    def load_locations_from_csv(self, filename: str) -> list[LocationSchema]:
+        df: pd.DataFrame = pd.read_csv(filename)
+        df_dicts = df.to_dict(orient="records")
+
+        locations: list[LocationSchemaCsv] = [LocationSchemaCsv(**i) for i in df_dicts]
+        locations_dto = [
+            LocationSchemaAddDTO.model_validate(i, from_attributes=True)
+            for i in locations
+        ]
+        locations_DTO = self.repository.insert_locations(locations=locations_dto)
+        return locations_DTO

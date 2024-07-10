@@ -42,3 +42,8 @@ class CarRepository(Repository):
             return None
         car_DTO = CarSchema.model_validate(car, from_attributes=True) if car else None
         return car_DTO
+
+    def clear_table(self):
+        session = self.get_session()
+        session.query(CarModel).delete()
+        session.commit()

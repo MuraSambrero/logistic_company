@@ -27,8 +27,16 @@ class CargoService:
         result = self.repository.create(cargo_schema)
         return result
 
-    def get_cargos(self) -> list[CargoSchemaNearCar]:
-        cargos_pickup = self.repository.get_cargos_pickup_location()
+    def get_cargos(
+        self,
+        min_weight: int,
+        max_weight: int,
+        max_distance: float,
+    ) -> list[CargoSchemaNearCar]:
+        cargos_pickup = self.repository.get_cargos_pickup_location(
+            min_weight=min_weight,
+            max_weight=max_weight,
+        )
         cars_with_locations = self.car_service.get_cars_rel()
         cargo_near_cars: list[CargoSchemaNearCar] = []
         for cargo in cargos_pickup:
@@ -38,11 +46,14 @@ class CargoService:
                 distance = LocationService.get_distance(
                     cargo.pickup_location, car.location
                 )
-                if distance <= 450:
+                if distance <= max_distance:
                     new_car.count_car += 1
         return cargo_near_cars
 
-    def get_cargo_with_cars(self, cargo_id: int) -> CargoSchemaWithCars | None:
+    def get_cargo_with_cars(
+        self,
+        cargo_id: int,
+    ) -> CargoSchemaWithCars | None:
         cargo_with_location = self.repository.get_cargo(cargo_id)
         if cargo_with_location is None:
             return None
@@ -63,7 +74,9 @@ class CargoService:
     def update_cargo(
         self, cargo_id: int, cargo_schema: CargoSchemaPatchAPI
     ) -> CargoSchema | None:
-        cargo = CargoSchemaPatch(id=cargo_id, **cargo_schema.model_dump(exclude_none=True))
+        cargo = CargoSchemaPatch(
+            id=cargo_id, **cargo_schema.model_dump(exclude_none=True)
+        )
         result = self.repository.update_cargo(cargo)
         return result
 

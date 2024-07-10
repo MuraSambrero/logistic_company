@@ -12,12 +12,6 @@ from sqlalchemy.exc import IntegrityError
 from repositories.repository import Repository
 from sqlalchemy import update
 
-# - Создание нового груза (характеристики локаций pick-up, delivery определяются по введенному zip-коду);
-# - Получение списка грузов (локации pick-up, delivery, количество ближайших машин до груза ( =< 450 миль));
-# - Получение информации о конкретном грузе по ID (локации pick-up, delivery, вес, описание, список номеров ВСЕХ машин с расстоянием до выбранного груза);
-# - Редактирование груза по ID (вес, описание);
-# - Удаление груза по ID.
-
 
 class CargoRepository(Repository):
     def create(self, cargo_schema: CargoSchemaAdd) -> CargoSchema | None:
@@ -36,10 +30,16 @@ class CargoRepository(Repository):
         cargo_dto = CargoSchema.model_validate(cargo_model, from_attributes=True)
         return cargo_dto
 
-    def get_cargos_pickup_location(self) -> list[CargoSchemaPickup]:
+    def get_cargos_pickup_location(
+        self, min_weight: int, max_weight: int
+    ) -> list[CargoSchemaPickup]:
         query = (
             select(CargoModel)
             .select_from(CargoModel)
+            .where(
+                CargoModel.weight >= min_weight,
+                CargoModel.weight <= max_weight,
+            )
             .options(selectinload(CargoModel.pickup_location))
         )
         cursor = self.get_new_session.execute(query)
@@ -84,14 +84,15 @@ class CargoRepository(Repository):
 
     def delete_cargo(self, cargo_id: int) -> CargoSchema | None:
         session = self.get_session()
-        stmt = (
-            delete(CargoModel)
-            .where(CargoModel.id == cargo_id)
-            .returning(CargoModel)
-        )
+        stmt = delete(CargoModel).where(CargoModel.id == cargo_id).returning(CargoModel)
         cursor = session.execute(stmt)
         cargo_model = cursor.scalar_one_or_none()
         if cargo_model is None:
             return None
         cargo_dto = CargoSchema.model_validate(cargo_model, from_attributes=True)
         return cargo_dto
+
+    def clear_table(self):
+        session = self.get_session()
+        session.query(CargoModel).delete()
+        session.commit()
